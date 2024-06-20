@@ -1,9 +1,11 @@
 ﻿using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using OpenCvRecognition;
 using OpenCvRecognition.WPF;
 using OpenCvSharp.WpfExtensions;
 using Prism.Commands;
@@ -13,45 +15,59 @@ namespace OpencvStudy.Components;
 
 public class MainWindowViewModel : BindableBase
 {
+    Recognition_Wpf _recognition;
     public MainWindowViewModel(Recognition_Wpf recognition)
     {
+        _recognition = recognition;
         RecognitionInit(recognition);
-
-        StartCommand = new DelegateCommand(() =>
-        {
-            StartButtonStatus = false;
-            _ = recognition.RecognizeImageAsync();
-            StartButtonStatus = true;
-        });
     }
 
+    string _startButtonContent = "Start";
+    public string StartButtonContent
+    {
+        get => _startButtonContent;
+        set => SetProperty(ref _startButtonContent, value);
+    }
+    CancellationTokenSource? _cts;
     bool _startButtonStatus = true;
     public bool StartButtonStatus
     {
         get => _startButtonStatus;
-        private set => SetProperty(ref _startButtonStatus, value);
+        set
+        {
+            SetProperty(ref _startButtonStatus, value);
+            if (!value)
+            {
+                _ = _recognition.RecognizeImageAsync((_cts = new()).Token);
+                StartButtonContent = "Stop";
+            }else
+            {
+                _cts?.Cancel();
+                StartButtonContent = "Start";
+            }
+            Video = null;
+        }
     }
 
     private void RecognitionInit(Recognition_Wpf recognition)
     {
-        recognition.SetVideoCapture(0);
-        recognition.LoadDefaultCascadeClassifier();
+        recognition.SetCapture(o => o.VideoCaptureIndex = 0);
+        recognition.SetAnalyzer(o=>o.LoadDefaultCascadeClassifier());
         recognition.ImageUpdated += (mat) =>
         {
             try
             {
                 Video = mat.ToWriteableBitmap();
-            } catch (Exception ex)
+            } catch (Exception)
             {
             }
         };
         recognition.RecognitionSuccess += (mat) =>
         {
-            return;
             try
             {
-                //Image?.WritePixelsFromMat(mat);
-            } catch (Exception ex)
+                Image = mat.ToWriteableBitmap();
+            } catch (Exception)
             {
             }
         };

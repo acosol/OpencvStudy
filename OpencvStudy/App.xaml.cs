@@ -14,6 +14,9 @@ public partial class App : PrismApplication
 {
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
+
+
+
         containerRegistry.RegisterSingleton<Dispatcher>(r => Current.Dispatcher);
         containerRegistry.RegisterSingleton<Recognition>();
     }
